@@ -31,8 +31,8 @@ Pure TypeScript engine containing the constraint resolution algorithm:
 
 ### 3. Rendering Layer (`src/render-dom.tsx` & `src/render-canvas.tsx`)
 Separated rendering components:
-- **DOM Renderer**: Renders absolute-positioned HTML elements styled with CSS.
-- **Canvas Renderer**: Draws elements directly to an HTML5 2D Canvas context.
+- **DOM Renderer**: Renders absolute-positioned HTML elements styled with Tailwind CSS (natural text wrapping, high contrast text themes).
+- **Canvas Renderer**: Draws elements directly to an HTML5 2D Canvas context featuring high-DPI resolution scaling (`devicePixelRatio`), theme gradient fills, rounded image clipping, and dynamic multi-line word wrapping (`ctx.measureText()`).
 - Both renderers consume the exact same `ResolvedLayout` payload.
 
 ---

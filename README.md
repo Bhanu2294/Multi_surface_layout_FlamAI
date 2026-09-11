@@ -90,9 +90,9 @@ npm run build
 
 2. **Aspect Ratio Flow Classification**:
    Computes aspect ratio $AR = \text{usableWidth} / \text{usableHeight}$:
-   - $AR \ge 2.0 \implies \text{landscape}$: Columnar flow (Left: Branding/Hero, Center: Headline/Tagline, Right: CTA).
-   - $AR \le 0.8 \implies \text{portrait}$: Vertical stacked flow (Top: Logo/Badge, Middle: Hero/Headline, Bottom: Price/CTA).
-   - $0.8 < AR < 2.0 \implies \text{square}$: Two-section balanced flow (Top: Hero/Logo, Bottom: Headline/CTA).
+   - $AR \ge 1.35 \implies \text{landscape}$: 3-Column horizontal flow (Left: Hero Image, Center: Badge/Headline/Price/Tagline, Right: CTA).
+   - $AR \le 0.85 \implies \text{portrait}$: Single-column vertically stacked flow (Badge $\rightarrow$ Hero Image $\rightarrow$ Headline $\rightarrow$ Price $\rightarrow$ Tagline $\rightarrow$ CTA).
+   - $0.85 < AR < 1.35 \implies \text{square}$: Balanced vertical flow optimized for touchscreen kiosks.
 
 3. **Surface Hard Constraint Enforcement**:
    - `minTextSize`: For far-viewing surfaces (broadcast), text font sizes scale up to at least `minTextSize` (e.g. 32px).
@@ -100,9 +100,9 @@ npm run build
 
 4. **Space Budgeting & Priority-Based Degradation**:
    Calculates total required space vs. available budget. If total space exceeds bounds:
-   - **Pass 1 (Priority 3)**: Optional elements (`tagline`, `badge`, `logo`) shrink padding/font size. If still overflowing, they drop (`visible: false`).
-   - **Pass 2 (Priority 2 & Hero)**: Hero image scales down proportionally (e.g. 40% shrink factor) while maintaining aspect ratio.
-   - **Pass 3 (Priority 2 Non-CTA)**: Secondary elements like extra price details drop while preserving the CTA button and primary headline.
+   - **Pass 1 (Priority 3)**: Optional long text (`tagline`) drops before badges or core messaging.
+   - **Pass 2 (Hero Scaling)**: Hero image scales down proportionally while maintaining aspect ratio.
+   - **Pass 3 (Priority 2 Non-Price)**: Non-essential secondary elements scale or drop while preserving the CTA button, Price ($499), and primary headline.
    - **Priority 1**: Critical elements (`headline`, `product-image`) are guaranteed non-overlapping placement.
 
 5. **Non-Overlapping Geometric Box Placement**:
@@ -115,15 +115,17 @@ npm run build
 - **Domain Model Isolation**: `AdSpec`, `SurfaceProfile`, `AdElement`, and `ResolvedLayout` are strictly decoupled.
 - **Validation**: `defineAd()` helper verifies unique element IDs and compile-time property types.
 - **Type-Safe Layout Output**: `ResolvedElement` provides explicit bounding box geometries that renderers consume directly.
+- **Canvas Word-Wrapping**: HTML5 Canvas renderer uses `ctx.measureText()` for dynamic multi-line word wrapping matching DOM text bounds.
 
 ---
 
-## ⏱️ Time Spent & Limitations
+## ⏱️ Time Spent & Architecture Scope
 
 - **Time Spent**: ~4 hours (Architecture design, solver algorithm, dual renderers, test suite, and interactive UI).
-- **Known Limitations**:
-  - Simplified text wrapping estimations (can be enhanced with browser Canvas `measureText()` in future iterations).
-  - Fixed set of element roles (`hero`, `primary`, `secondary`, `action`, `branding`, `badge`).
+- **Architecture Highlights**:
+  - Pure geometric space budgeting without per-surface branches (`if (surface === "mobile")`).
+  - High-DPI Canvas 2D rendering with dynamic `measureText()` word wrapping.
+  - Guaranteed price visibility and priority degradation across 5 distinct surface profiles.
 
 ---
 
