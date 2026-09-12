@@ -24,6 +24,9 @@ export function App() {
   const [rendererMode, setRendererMode] = useState<'dom' | 'canvas'>('dom');
   const [showDebugBounds, setShowDebugBounds] = useState<boolean>(true);
   
+  // Mobile Tab Navigation ('surfaces' | 'stage' | 'inspector')
+  const [activeMobileTab, setActiveMobileTab] = useState<'surfaces' | 'stage' | 'inspector'>('stage');
+
   // Auto & Manual Scaling State
   const [scaleMode, setScaleMode] = useState<'auto' | 'manual'>('auto');
   const [manualScale, setManualScale] = useState<number>(0.85);
@@ -64,8 +67,9 @@ export function App() {
       const container = stageContainerRef.current;
       if (!container) return;
 
-      const availW = container.clientWidth - 64;
-      const availH = container.clientHeight - 64;
+      const padding = window.innerWidth < 640 ? 16 : 48;
+      const availW = container.clientWidth - padding;
+      const availH = container.clientHeight - padding;
 
       if (availW <= 0 || availH <= 0) return;
 
@@ -74,7 +78,7 @@ export function App() {
 
       // Fit to container, max scale 1.0
       const computedScale = Math.min(1.0, Math.min(scaleX, scaleY));
-      setAutoScale(Math.max(0.2, Number(computedScale.toFixed(3))));
+      setAutoScale(Math.max(0.15, Number(computedScale.toFixed(3))));
     };
 
     calculateScale();
@@ -84,70 +88,107 @@ export function App() {
       observer.observe(stageContainerRef.current);
     }
 
-    return () => observer.disconnect();
-  }, [activeSurface, scaleMode]);
+    window.addEventListener('resize', calculateScale);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', calculateScale);
+    };
+  }, [activeSurface, scaleMode, activeMobileTab]);
 
   const currentScale = scaleMode === 'auto' ? autoScale : manualScale;
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 font-sans">
       {/* Top Navigation Bar */}
-      <header className="h-16 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-50">
+      <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-4 lg:px-6 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 shrink-0">
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="font-extrabold text-lg tracking-tight text-white flex items-center gap-2">
+            <h1 className="font-extrabold text-base md:text-lg tracking-tight text-white flex items-center gap-2">
               Flam Adaptive Layout Engine
               <span className="text-[10px] font-mono font-semibold px-2 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-full">
                 v1.0.0
               </span>
             </h1>
-            <p className="text-xs text-slate-400">Multi-Surface Ad Spec Constraint Resolver</p>
+            <p className="text-[11px] md:text-xs text-slate-400">Multi-Surface Ad Spec Constraint Resolver</p>
           </div>
         </div>
 
-        {/* Global Controls */}
-        <div className="flex items-center gap-4">
+        {/* Global Controls & Render Mode Toggle */}
+        <div className="w-full md:w-auto flex items-center justify-between md:justify-end gap-2 sm:gap-3 flex-wrap">
           {/* Renderer Backend Selector */}
           <div className="bg-slate-800 p-1 rounded-lg border border-slate-700 flex items-center text-xs font-medium">
             <button
               onClick={() => setRendererMode('dom')}
-              className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all ${
                 rendererMode === 'dom' ? 'bg-cyan-500 text-white font-bold shadow' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <Layers className="w-3.5 h-3.5" /> DOM Renderer
+              <Layers className="w-3.5 h-3.5" /> DOM <span className="hidden sm:inline">Renderer</span>
             </button>
             <button
               onClick={() => setRendererMode('canvas')}
-              className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all ${
                 rendererMode === 'canvas' ? 'bg-cyan-500 text-white font-bold shadow' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <MonitorPlay className="w-3.5 h-3.5" /> Canvas Backend
+              <MonitorPlay className="w-3.5 h-3.5" /> Canvas <span className="hidden sm:inline">Backend</span>
             </button>
           </div>
 
           {/* Debug Overlay Toggle */}
           <button
             onClick={() => setShowDebugBounds(!showDebugBounds)}
-            className={`px-3 py-2 rounded-lg border text-xs font-semibold flex items-center gap-2 transition-all ${
+            className={`px-2.5 sm:px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all ${
               showDebugBounds
                 ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300'
                 : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
             }`}
           >
-            <Eye className="w-4 h-4" /> Bounds Overlay {showDebugBounds ? 'ON' : 'OFF'}
+            <Eye className="w-3.5 h-3.5" /> Bounds {showDebugBounds ? 'ON' : 'OFF'}
           </button>
         </div>
       </header>
 
+      {/* Mobile Tab Navigation Bar (Visible only on screens < 1024px) */}
+      <div className="flex lg:hidden bg-slate-900 border-b border-slate-800 p-1">
+        <button
+          onClick={() => setActiveMobileTab('surfaces')}
+          className={`flex-1 py-2 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+            activeMobileTab === 'surfaces' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-slate-400'
+          }`}
+        >
+          <Smartphone className="w-4 h-4" /> Surfaces
+        </button>
+        <button
+          onClick={() => setActiveMobileTab('stage')}
+          className={`flex-1 py-2 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+            activeMobileTab === 'stage' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-slate-400'
+          }`}
+        >
+          <Activity className="w-4 h-4" /> Ad Stage
+        </button>
+        <button
+          onClick={() => setActiveMobileTab('inspector')}
+          className={`flex-1 py-2 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+            activeMobileTab === 'inspector' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'text-slate-400'
+          }`}
+        >
+          <Sliders className="w-4 h-4" /> Inspector
+        </button>
+      </div>
+
       {/* Main Workspace Layout */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar: Surface Preset Controls & Live Custom Surface Creator */}
-        <aside className="w-80 border-r border-slate-800 bg-slate-900/50 p-4 flex flex-col gap-6 overflow-y-auto">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Left Sidebar: Surface Presets & Custom Surface Creator */}
+        <aside
+          className={`${
+            activeMobileTab === 'surfaces' ? 'flex' : 'hidden'
+          } lg:flex w-full lg:w-80 border-r border-slate-800 bg-slate-900/50 p-4 flex-col gap-6 overflow-y-auto shrink-0`}
+        >
           <div>
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
               <Smartphone className="w-4 h-4 text-cyan-400" /> Target Surface Profiles
@@ -161,6 +202,7 @@ export function App() {
                     onClick={() => {
                       setIsCustomActive(false);
                       setSelectedSurfaceId(surf.id);
+                      setActiveMobileTab('stage'); // Auto-switch to stage preview on mobile selection
                     }}
                     className={`w-full text-left p-3 rounded-xl border transition-all ${
                       isActive
@@ -188,7 +230,10 @@ export function App() {
                 <Settings2 className="w-4 h-4 text-amber-400" /> Live Custom Surface (5th Surface)
               </h2>
               <button
-                onClick={() => setIsCustomActive(true)}
+                onClick={() => {
+                  setIsCustomActive(true);
+                  setActiveMobileTab('stage');
+                }}
                 className={`text-xs px-2 py-0.5 rounded font-medium border ${
                   isCustomActive ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold' : 'bg-slate-800 text-slate-400 border-slate-700'
                 }`}
@@ -270,26 +315,30 @@ export function App() {
         </aside>
 
         {/* Center Preview Stage */}
-        <main className="flex-1 bg-slate-950 p-6 flex flex-col items-center justify-between overflow-auto relative">
-          {/* Controls Bar */}
-          <div className="w-full max-w-4xl flex items-center justify-between bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/80 mb-4 backdrop-blur-sm">
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                <Activity className="w-4 h-4 text-cyan-400" /> Surface Stage:
+        <main
+          className={`${
+            activeMobileTab === 'stage' ? 'flex' : 'hidden'
+          } lg:flex flex-1 bg-slate-950 p-3 sm:p-6 flex-col items-center justify-between overflow-auto relative`}
+        >
+          {/* Stage Metrics Control Bar */}
+          <div className="w-full max-w-4xl flex flex-wrap items-center justify-between bg-slate-900/60 p-2 sm:p-2.5 rounded-xl border border-slate-800/80 mb-3 sm:mb-4 gap-2 backdrop-blur-sm">
+            <div className="flex items-center gap-2 flex-wrap text-xs">
+              <span className="font-bold text-slate-300 flex items-center gap-1">
+                <Activity className="w-4 h-4 text-cyan-400" /> Stage:
               </span>
-              <span className="text-xs font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 px-2 py-0.5 rounded">
+              <span className="font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 px-2 py-0.5 rounded text-[11px]">
                 {activeSurface.width} x {activeSurface.height} px
               </span>
-              <span className="text-xs font-mono bg-purple-500/10 text-purple-300 border border-purple-500/20 px-2 py-0.5 rounded uppercase">
-                {resolvedLayout.orientation} Layout
+              <span className="font-mono bg-purple-500/10 text-purple-300 border border-purple-500/20 px-2 py-0.5 rounded uppercase text-[11px]">
+                {resolvedLayout.orientation}
               </span>
             </div>
 
             {/* Auto & Manual Scale Selector */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 onClick={() => setScaleMode('auto')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
                   scaleMode === 'auto'
                     ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
                     : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
@@ -298,7 +347,7 @@ export function App() {
                 <Maximize2 className="w-3.5 h-3.5" /> Auto-Fit ({Math.round(autoScale * 100)}%)
               </button>
 
-              <div className="h-4 w-[1px] bg-slate-800 mx-1" />
+              <div className="h-4 w-[1px] bg-slate-800 mx-1 hidden sm:block" />
 
               {[0.5, 0.75, 1.0].map(s => (
                 <button
@@ -307,7 +356,7 @@ export function App() {
                     setScaleMode('manual');
                     setManualScale(s);
                   }}
-                  className={`px-2 py-1 text-xs font-mono rounded transition-all ${
+                  className={`px-2 py-1 text-xs font-mono rounded transition-all hidden sm:inline-block ${
                     scaleMode === 'manual' && manualScale === s
                       ? 'bg-slate-700 text-cyan-300 font-bold border border-cyan-500/30'
                       : 'text-slate-400 hover:text-white'
@@ -320,7 +369,7 @@ export function App() {
           </div>
 
           {/* Ad Renderer Display Stage (Ref for Auto-Scaling) */}
-          <div ref={stageContainerRef} className="flex-1 w-full flex items-center justify-center relative p-4 overflow-hidden">
+          <div ref={stageContainerRef} className="flex-1 w-full flex items-center justify-center relative p-2 sm:p-4 overflow-hidden min-h-[320px]">
             <div
               style={{
                 transform: `scale(${currentScale})`,
@@ -336,20 +385,24 @@ export function App() {
             </div>
           </div>
 
-          {/* Quick Engine Metrics Footer */}
-          <div className="w-full max-w-4xl bg-slate-900/60 p-3 rounded-xl border border-slate-800/80 flex items-center justify-between text-xs text-slate-400 backdrop-blur-sm">
-            <div className="flex items-center gap-4">
-              <span>Resolution Time: <strong className="text-emerald-400 font-mono">{resolvedLayout.resolutionTimeMs} ms</strong></span>
-              <span>Usable Area: <strong className="text-slate-200 font-mono">{Math.round(resolvedLayout.usableWidth)}x{Math.round(resolvedLayout.usableHeight)} px</strong></span>
+          {/* Engine Performance Footer */}
+          <div className="w-full max-w-4xl bg-slate-900/60 p-2.5 sm:p-3 rounded-xl border border-slate-800/80 flex flex-wrap items-center justify-between text-xs text-slate-400 backdrop-blur-sm gap-2">
+            <div className="flex items-center gap-3 sm:gap-4 flex-wrap text-[11px] sm:text-xs">
+              <span>Time: <strong className="text-emerald-400 font-mono">{resolvedLayout.resolutionTimeMs} ms</strong></span>
+              <span>Usable Bounds: <strong className="text-slate-200 font-mono">{Math.round(resolvedLayout.usableWidth)}x{Math.round(resolvedLayout.usableHeight)} px</strong></span>
             </div>
-            <div>
-              <span>Stage Scale: <strong className="text-cyan-400 font-mono">{Math.round(currentScale * 100)}% ({scaleMode})</strong></span>
+            <div className="text-[11px] sm:text-xs">
+              <span>Scale: <strong className="text-cyan-400 font-mono">{Math.round(currentScale * 100)}% ({scaleMode})</strong></span>
             </div>
           </div>
         </main>
 
         {/* Right Sidebar: Resolution Inspector & Degradation Logs */}
-        <aside className="w-96 border-l border-slate-800 bg-slate-900/50 p-4 flex flex-col gap-5 overflow-y-auto">
+        <aside
+          className={`${
+            activeMobileTab === 'inspector' ? 'flex' : 'hidden'
+          } lg:flex w-full lg:w-96 border-l border-slate-800 bg-slate-900/50 p-4 flex-col gap-5 overflow-y-auto shrink-0`}
+        >
           {/* Surface Constraints Inspector */}
           <div>
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-2">
