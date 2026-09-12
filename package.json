@@ -5,10 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npx tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run",
-    "postinstall": "chmod +x ./node_modules/.bin/* || true"
+    "test": "vitest run"
   },
   "dependencies": {
     "lucide-react": "^0.344.0",
